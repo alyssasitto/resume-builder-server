@@ -113,6 +113,46 @@ router.post("/login", (req, res) => {
 	});
 });
 
+router.get("/demo_user", (req, res) => {
+	db.query(
+		"SELECT * FROM users WHERE email = ?",
+		"demouser@gmail.com",
+		(err, result) => {
+			if (result.length === 0) {
+				return res.status(400).json({ err: "Invalid credentials" });
+			} else if (result.length > 0) {
+				const passwordsMatch = bcryptjs.compareSync(
+					"password123",
+					result[0].password
+				);
+
+				if (!passwordsMatch) {
+					return res.status(400).json({ err: "Invalid credentials" });
+				} else {
+					const payload = {
+						name: result[0].name,
+						email: result[0].password,
+					};
+
+					const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
+						algorithm: "HS256",
+						expiresIn: "1h",
+					});
+
+					const refresh_token = jwt.sign(payload, process.env.TOKEN_SECRET, {
+						algorithm: "HS256",
+						expiresIn: "1d",
+					});
+
+					return res.status(200).json({ token, refresh_token });
+				}
+			} else {
+				return res.status(500).json({ err: "Server error" });
+			}
+		}
+	);
+});
+
 router.get("/verify", isAuthenticated, (req, res) => {
 	res.status(200).json(req.user);
 });
